@@ -1,0 +1,10 @@
+﻿__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+saved_pages/
+questions.json
+questions_static.html
+questions_random.html
