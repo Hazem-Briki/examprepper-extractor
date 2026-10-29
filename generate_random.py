@@ -2,11 +2,16 @@
 import json
 import html
 import re
+import random
 from pathlib import Path
 
 
-INPUT_FILE = Path("questions.json")
-OUTPUT_FILE = Path("questions_random.html")
+BASE_DIR = Path(__file__).resolve().parent
+INPUT_FILE = BASE_DIR / "questions.json"
+OUTPUT_FILE = BASE_DIR / "questions_random.html"
+BATCH_DIR = BASE_DIR / "random_pages"
+
+BATCH_SIZE = 20
 
 
 def escape(value):
@@ -36,20 +41,16 @@ def render_images(images):
     return "\n".join(result)
 
 
-with INPUT_FILE.open("r", encoding="utf-8") as file:
-    questions = json.load(file)
-
-
-cards = []
-
-for question in questions:
+def render_question(question):
     answer = str(question.get("correct_answer", "")).strip().upper()
     answer_letters = set(re.findall(r"[A-Z]", answer))
 
     options_html = []
 
     for option in question.get("options", []):
-        # The JSON stores options such as "B. Serialization".
+        option = str(option)
+
+        # Keep the original answer-matching logic.
         match = re.match(r"^\s*([A-Z])\.\s*(.*)", option, re.S)
 
         if match:
@@ -67,14 +68,11 @@ for question in questions:
             f'</li>'
         )
 
-    correct_texts = [
-        option.get("text", "")
-        for option in []
-    ]
-
     correct_answer_text = question.get("correct_answer_text", [])
 
-    # Display the full correct answers because option letters are hidden.
+    if isinstance(correct_answer_text, str):
+        correct_answer_text = [correct_answer_text]
+
     if correct_answer_text:
         answer_display = "; ".join(
             re.sub(r"^\s*[A-Z]\.\s*", "", str(item))
@@ -91,7 +89,7 @@ for question in questions:
         else '<div class="explanation">No explanation available.</div>'
     )
 
-    cards.append(f"""
+    return f"""
     <article class="question-card">
       <div class="question-text">{escape(question.get("question", ""))}</div>
       {render_images(question.get("question_images", []))}
@@ -106,15 +104,18 @@ for question in questions:
         {render_images(question.get("answer_images", []))}
       </div>
     </article>
-    """)
+    """
 
 
-document = f"""<!DOCTYPE html>
+def render_document(questions, title, description):
+    cards = [render_question(question) for question in questions]
+
+    document = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Google Professional Data Engineer — Random Practice</title>
+<title>{escape(title)}</title>
 
 <style>
   body {{
@@ -191,15 +192,16 @@ document = f"""<!DOCTYPE html>
   .question-image {{
     display: block;
     max-width: 100%;
+    height: auto;
     margin: 12px 0;
   }}
 </style>
 </head>
 
 <body>
-<h1>Google Professional Data Engineer</h1>
+<h1>{escape(title)}</h1>
 <p class="summary">
-  {len(questions)} questions · Random question order and random option order
+  {len(questions)} questions · {escape(description)}
 </p>
 
 <button class="shuffle-button" id="shuffle-button" type="button">
@@ -267,15 +269,82 @@ document.querySelectorAll(".answer-button").forEach(button => {{
 
 document.getElementById("shuffle-button").addEventListener("click", shuffleAll);
 
-// Randomize automatically whenever the page opens or refreshes.
 shuffleAll();
 </script>
 </body>
 </html>
 """
 
-OUTPUT_FILE.write_text(document, encoding="utf-8")
+    return document
 
-print(f"Generated: {OUTPUT_FILE.resolve()}")
-print(f"Questions included: {len(questions)}")
-print("Questions and options will shuffle on every refresh.")
+
+def remove_old_batches():
+    if BATCH_DIR.exists():
+        for file in BATCH_DIR.glob("questions_random_*.html"):
+            file.unlink()
+
+
+def main():
+    if not INPUT_FILE.exists():
+        raise FileNotFoundError(
+            f"Could not find {INPUT_FILE}. Run html_to_json.py first."
+        )
+
+    with INPUT_FILE.open("r", encoding="utf-8") as file:
+        questions = json.load(file)
+
+    if not isinstance(questions, list):
+        raise ValueError("questions.json must contain a JSON list of questions.")
+
+    # Generate the complete page, preserving the original question set.
+    full_document = render_document(
+        questions,
+        "Google Professional Data Engineer — Random Practice",
+        "Random question order and random option order"
+    )
+    OUTPUT_FILE.write_text(full_document, encoding="utf-8")
+
+    # Remove old batch files so outdated questions cannot remain.
+    remove_old_batches()
+
+    batch_count = 0
+
+    if len(questions) > BATCH_SIZE:
+        BATCH_DIR.mkdir(parents=True, exist_ok=True)
+
+        # Randomize batch membership without adding or removing questions.
+        shuffled_questions = questions.copy()
+        random.shuffle(shuffled_questions)
+
+        for start in range(0, len(shuffled_questions), BATCH_SIZE):
+            batch_count += 1
+            batch_questions = shuffled_questions[
+                start:start + BATCH_SIZE
+            ]
+
+            batch_file = BATCH_DIR / (
+                f"questions_random_{batch_count:03d}.html"
+            )
+
+            batch_document = render_document(
+                batch_questions,
+                f"Google Professional Data Engineer — Random Practice "
+                f"(Batch {batch_count:03d})",
+                f"Batch {batch_count:03d} · "
+                f"{len(batch_questions)} questions · Random order"
+            )
+
+            batch_file.write_text(batch_document, encoding="utf-8")
+
+    print(f"Generated full page: {OUTPUT_FILE.resolve()}")
+    print(f"Questions included in full page: {len(questions)}")
+
+    if batch_count:
+        print(f"Generated batch pages: {batch_count}")
+        print(f"Batch folder: {BATCH_DIR.resolve()}")
+    else:
+        print("20 or fewer questions: no batch pages generated.")
+
+
+if __name__ == "__main__":
+    main()
