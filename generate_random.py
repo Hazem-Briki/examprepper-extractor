@@ -195,6 +195,33 @@ def render_document(questions, title, description):
     height: auto;
     margin: 12px 0;
   }}
+
+  .back-to-top {{
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    display: none;
+    width: 46px;
+    height: 46px;
+    border: none;
+    border-radius: 50%;
+    background: #1a73e8;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  }}
+
+  .back-to-top.visible {{
+    display: block;
+  }}
+
+  @media print {{
+    .back-to-top {{
+      display: none !important;
+    }}
+  }}
 </style>
 </head>
 
@@ -211,6 +238,11 @@ def render_document(questions, title, description):
 <div id="questions">
   {''.join(cards)}
 </div>
+
+<button id="back-to-top" class="back-to-top"
+        type="button" aria-label="Back to top">
+  ↑
+</button>
 
 <script>
 function shuffleChildren(container) {{
@@ -270,6 +302,16 @@ document.querySelectorAll(".answer-button").forEach(button => {{
 document.getElementById("shuffle-button").addEventListener("click", shuffleAll);
 
 shuffleAll();
+
+const backToTopButton = document.getElementById("back-to-top");
+
+window.addEventListener("scroll", () => {{
+  backToTopButton.classList.toggle("visible", window.scrollY > 300);
+}});
+
+backToTopButton.addEventListener("click", () => {{
+  window.scrollTo({{ top: 0, behavior: "smooth" }});
+}});
 </script>
 </body>
 </html>
@@ -312,15 +354,16 @@ def main():
     if len(questions) > BATCH_SIZE:
         BATCH_DIR.mkdir(parents=True, exist_ok=True)
 
-        # Randomize batch membership without adding or removing questions.
-        shuffled_questions = questions.copy()
-        random.shuffle(shuffled_questions)
-
-        for start in range(0, len(shuffled_questions), BATCH_SIZE):
+        # Keep batch membership identical to the static pages.
+        # Shuffle only the question order within each batch.
+        for start in range(0, len(questions), BATCH_SIZE):
             batch_count += 1
-            batch_questions = shuffled_questions[
+
+            batch_questions = questions[
                 start:start + BATCH_SIZE
-            ]
+            ].copy()
+
+            random.shuffle(batch_questions)
 
             batch_file = BATCH_DIR / (
                 f"questions_random_{batch_count:03d}.html"

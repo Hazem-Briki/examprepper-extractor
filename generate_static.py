@@ -225,10 +225,33 @@ def render_document(questions, title):
   }}
   .explanation {{ white-space: pre-wrap; }}
   .question-image {{ display: block; max-width: 100%; margin: 12px 0; }}
+
+  .back-to-top {{
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    display: none;
+    width: 46px;
+    height: 46px;
+    border: none;
+    border-radius: 50%;
+    background: #1a73e8;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  }}
+
+  .back-to-top.visible {{
+    display: block;
+  }}
+
   @media print {{
     body {{ background: white; }}
     .question-card {{ break-inside: avoid; }}
     .answer-button {{ display: none; }}
+    .back-to-top {{ display: none !important; }}
   }}
 </style>
 </head>
@@ -236,6 +259,12 @@ def render_document(questions, title):
 <h1>{escape(title)}</h1>
 <p class="summary">{len(questions)} questions · Original question order and alphabetical option order</p>
 {''.join(cards)}
+
+<button id="back-to-top" class="back-to-top"
+        type="button" aria-label="Back to top">
+  ↑
+</button>
+
 <script>
 document.querySelectorAll(".answer-button").forEach(button => {{
   button.addEventListener("click", () => {{
@@ -254,6 +283,16 @@ document.querySelectorAll(".answer-button").forEach(button => {{
       );
     }});
   }});
+}});
+
+const backToTopButton = document.getElementById("back-to-top");
+
+window.addEventListener("scroll", () => {{
+  backToTopButton.classList.toggle("visible", window.scrollY > 300);
+}});
+
+backToTopButton.addEventListener("click", () => {{
+  window.scrollTo({{ top: 0, behavior: "smooth" }});
 }});
 </script>
 </body>
