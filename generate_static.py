@@ -5,12 +5,13 @@ import html
 from pathlib import Path
 from bs4 import BeautifulSoup
 
+
 BATCH_SIZE = 20
 
 BASE_DIR = Path(__file__).resolve().parent
 SAVED_PAGES_DIR = BASE_DIR / "saved_pages"
 OUTPUT_FILE = BASE_DIR / "questions_static.html"
-BATCH_DIR = BASE_DIR / "static_pages"
+OUTPUT_DIR = BASE_DIR / "exam_pages"
 
 
 def page_number(path):
@@ -119,7 +120,9 @@ def load_questions():
             })
 
     if not questions:
-        raise SystemExit("No questions were extracted from the saved pages.")
+        raise SystemExit(
+            "No questions were extracted from the saved pages."
+        )
 
     return questions
 
@@ -129,7 +132,9 @@ def render_document(questions, title):
 
     for question in questions:
         number = question["number"]
-        answer_letters = set(re.findall(r"[A-Z]", question["answer"]))
+        answer_letters = set(
+            re.findall(r"[A-Z]", question["answer"])
+        )
 
         options_html = []
 
@@ -224,7 +229,11 @@ def render_document(questions, title):
     border-radius: 6px;
   }}
   .explanation {{ white-space: pre-wrap; }}
-  .question-image {{ display: block; max-width: 100%; margin: 12px 0; }}
+  .question-image {{
+    display: block;
+    max-width: 100%;
+    margin: 12px 0;
+  }}
 
   .back-to-top {{
     position: fixed;
@@ -302,58 +311,56 @@ backToTopButton.addEventListener("click", () => {{
     return document
 
 
-def remove_old_batches():
-    if BATCH_DIR.exists():
-        for file in BATCH_DIR.glob("questions_static_*.html"):
-            file.unlink()
-
-
 def main():
     questions = load_questions()
 
-    # Always generate the complete question page in the project root.
+    # Keep the complete static page in the project root.
     full_document = render_document(
         questions,
         "Google Professional Data Engineer — All Questions",
     )
+
     OUTPUT_FILE.write_text(full_document, encoding="utf-8")
 
     print(f"Generated full page: {OUTPUT_FILE}")
     print(f"Questions included: {len(questions)}")
 
-    # Remove old batch files before generating the current set.
-    remove_old_batches()
+    # Generate static batches inside numbered folders.
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    if len(questions) > BATCH_SIZE:
-        BATCH_DIR.mkdir(parents=True, exist_ok=True)
+    total_batches = (
+        len(questions) + BATCH_SIZE - 1
+    ) // BATCH_SIZE
 
-        for start in range(0, len(questions), BATCH_SIZE):
-            batch_number = (start // BATCH_SIZE) + 1
-            batch = questions[start:start + BATCH_SIZE]
+    for start in range(0, len(questions), BATCH_SIZE):
+        batch_number = (start // BATCH_SIZE) + 1
+        batch = questions[start:start + BATCH_SIZE]
 
-            batch_file = BATCH_DIR / (
-                f"questions_static_{batch_number:03d}.html"
-            )
+        folder_name = f"page_{batch_number:02d}"
+        file_name = f"p_{batch_number:02d}_static.html"
 
-            batch_document = render_document(
-                batch,
-                f"Google Professional Data Engineer — "
-                f"Static Batch {batch_number:03d}",
-            )
+        batch_dir = OUTPUT_DIR / folder_name
+        batch_dir.mkdir(parents=True, exist_ok=True)
 
-            batch_file.write_text(batch_document, encoding="utf-8")
+        batch_file = batch_dir / file_name
 
-            print(
-                f"Generated batch: {batch_file.relative_to(BASE_DIR)} "
-                f"({len(batch)} questions)"
-            )
-
-        print(f"Static batches created: {BATCH_DIR}")
-    else:
-        print(
-            f"Only {len(questions)} questions found. "
-            "No static batch pages needed."
+        batch_document = render_document(
+            batch,
+            f"Google Professional Data Engineer — "
+            f"Static Batch {batch_number:02d}",
         )
+
+        batch_file.write_text(batch_document, encoding="utf-8")
+
+        print(
+            f"Generated: {batch_file.relative_to(BASE_DIR)} "
+            f"({len(batch)} questions)"
+        )
+
+    print("\nStatic generation completed!")
+    print(f"Total questions: {len(questions)}")
+    print(f"Static batches: {total_batches}")
+    print(f"Output folder: {OUTPUT_DIR.resolve()}")
 
 
 if __name__ == "__main__":

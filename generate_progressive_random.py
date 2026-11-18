@@ -8,7 +8,7 @@ import generate_random
 
 BASE_DIR = Path(__file__).resolve().parent
 INPUT_FILE = BASE_DIR / "questions.json"
-OUTPUT_DIR = BASE_DIR / "progressive_random_pages"
+OUTPUT_DIR = BASE_DIR / "exam_pages"
 
 BATCH_SIZE = 20
 
@@ -31,21 +31,27 @@ def main():
 
     total_questions = len(questions)
 
-    if total_questions == 0:
-        print("No questions found in questions.json.")
+    if total_questions <= BATCH_SIZE:
+        print(
+            "20 or fewer questions found. "
+            "No progressive pages needed."
+        )
         return
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
+    total_batches = (
+        total_questions + BATCH_SIZE - 1
+    ) // BATCH_SIZE
+
     page_count = 0
 
-    # Generate cumulative pages: 20, 40, 60, ... until all questions.
-    for target_count in range(
-        BATCH_SIZE,
-        total_questions + BATCH_SIZE,
-        BATCH_SIZE,
-    ):
-        target_count = min(target_count, total_questions)
+    # Start at page 2 because progressive pages begin with 40 questions.
+    for batch_number in range(2, total_batches + 1):
+        target_count = min(
+            batch_number * BATCH_SIZE,
+            total_questions,
+        )
 
         # Each page contains all questions from question 1 onward.
         page_questions = questions[:target_count].copy()
@@ -53,11 +59,13 @@ def main():
         # Randomize question order without changing the source JSON.
         random.shuffle(page_questions)
 
-        page_count += 1
+        folder_name = f"page_{batch_number:02d}"
+        file_name = f"p_{batch_number:02d}_progressive.html"
 
-        output_file = OUTPUT_DIR / (
-            f"questions_random_{page_count:03d}.html"
-        )
+        batch_dir = OUTPUT_DIR / folder_name
+        batch_dir.mkdir(parents=True, exist_ok=True)
+
+        output_file = batch_dir / file_name
 
         document = generate_random.render_document(
             page_questions,
@@ -68,17 +76,16 @@ def main():
 
         output_file.write_text(document, encoding="utf-8")
 
+        page_count += 1
+
         print(
-            f"Created: {output_file.relative_to(BASE_DIR)} "
+            f"Generated: {output_file.relative_to(BASE_DIR)} "
             f"({target_count}/{total_questions} questions)"
         )
 
-        if target_count == total_questions:
-            break
-
     print("\nProgressive random generation completed!")
     print(f"Total questions: {total_questions}")
-    print(f"Pages generated: {page_count}")
+    print(f"Progressive pages created: {page_count}")
     print(f"Output folder: {OUTPUT_DIR.resolve()}")
 
 

@@ -7,14 +7,17 @@ A Python-based tool that extracts exam questions from saved HTML pages, converts
 - Extract question data from saved HTML pages using BeautifulSoup.
 - Convert extracted questions into a structured JSON dataset.
 - Detect duplicate questions.
-- Generate a static study page that preserves question order and sorts answer options alphabetically.
-- Generate a randomized study page that shuffles questions and answer options.
+- Generate static study pages that preserve question order and sort answer options alphabetically.
+- Generate randomized study pages that shuffle questions and answer options.
+- Generate cumulative progressive random pages for extended practice.
 - Show or hide answers using interactive buttons.
 - Highlight correct answers in green when answers are revealed.
 - Display answer explanations and available question images.
-- Generate additional study pages in batches of 20 questions when the dataset contains more than 20 questions.
+- Generate study pages in batches of 20 questions.
+- Generate cumulative pages containing progressively larger question sets.
+- Include a Back to Top button on study pages.
 - Automate the complete workflow using a single Python script.
-- Open the full static and randomized study pages automatically in Brave Browser.
+- Open the full study pages and first batch pages automatically in Brave Browser.
 
 ## Technologies
 
@@ -28,29 +31,42 @@ A Python-based tool that extracts exam questions from saved HTML pages, converts
 
 ```text
 examprepper-extractor/
-├── saved_pages/          # Saved source HTML pages
-├── main.py               # Runs the complete workflow
-├── html_to_json.py       # Extracts questions into JSON
-├── check_duplicates.py   # Detects duplicate questions
-├── generate_static.py    # Generates static study pages
-├── generate_random.py    # Generates randomized study pages
-├── requirements.txt      # Python dependencies
+├── saved_pages/                  # Saved source HTML pages
+├── exam_pages/                   # Generated batch study pages
+│   ├── page_01/
+│   │   ├── p_01_static.html
+│   │   └── p_01_random.html
+│   ├── page_02/
+│   │   ├── p_02_static.html
+│   │   ├── p_02_random.html
+│   │   └── p_02_progressive.html
+│   ├── ...
+│   └── page_16/
+│       ├── p_16_static.html
+│       ├── p_16_random.html
+│       └── p_16_progressive.html
+├── main.py                       # Runs the complete workflow
+├── html_to_json.py               # Extracts questions into JSON
+├── check_duplicates.py           # Detects duplicate questions
+├── generate_static.py            # Generates static study pages
+├── generate_random.py            # Generates randomized study pages
+├── generate_progressive_random.py # Generates cumulative random pages
+├── requirements.txt              # Python dependencies
 ├── .gitignore
 └── README.md
 ```
 
-Generated files include:
+### Main generated files
 
 - `questions.json` — extracted question dataset.
-- `questions_static.html` — full static study page.
-- `questions_random.html` — full randomized study page.
-- `static_pages/` — static batches when there are more than 20 questions.
-- `random_pages/` — randomized batches when there are more than 20 questions.
+- `questions_static.html` — complete static study page.
+- `questions_random.html` — complete randomized study page.
+- `exam_pages/` — contains all generated batch study pages.
 
 ## Requirements
 
 - Python 3
-- Brave Browser, if you want the script to open the generated pages automatically.
+- Brave Browser, if you want the script to open generated pages automatically.
 
 Install the required Python packages:
 
@@ -74,33 +90,68 @@ python main.py
 
 The script runs the following steps:
 
-1. Extract questions from the saved HTML files.
+1. Extract questions from the saved HTML files and generate JSON.
 2. Detect duplicate questions.
-3. Generate the static study page.
-4. Generate the randomized study page.
-5. Open both full study pages in Brave Browser.
+3. Generate static study pages.
+4. Generate randomized study pages.
+5. Generate cumulative progressive random pages.
+
+After successful generation, the script automatically opens the complete static and randomized pages, along with the first static and randomized batch pages, in Brave Browser.
 
 ### 3. Study the questions
 
-Open either generated HTML page.
+Open any generated HTML study page.
 
 - Select **Show Answer** to reveal the answer and explanation.
 - Select **Hide Answer** to hide them again.
 - Correct options are highlighted in green when revealed.
-- Use **Shuffle Again** on the randomized page to reshuffle questions and answer options.
+- Use **Shuffle Again** on randomized pages to reshuffle questions and answer options.
+- Use the **Back to Top** button to return to the beginning of a page.
 
 ## Batch Generation
 
 The batch size is 20 questions per page.
 
-- **20 questions or fewer:** only the full static and randomized pages are generated.
-- **More than 20 questions:** the full pages are generated along with additional static and randomized batch pages.
+Three types of batch pages are generated:
 
-The static batches preserve question order. The randomized batches shuffle question and answer-option order.
+### 1. Static pages
+
+- Preserve the original question order.
+- Preserve alphabetical answer-option order.
+- Each page contains up to 20 questions.
+
+### 2. Random pages
+
+- Use the same question membership as the corresponding static batch.
+- Shuffle the question order.
+- Shuffle the answer-option order.
+- Include a Shuffle Again button for additional randomization.
+
+### 3. Progressive random pages
+
+- Contain cumulative question sets.
+- Start with the first 40 questions in `page_02`.
+- Add another 20 questions with each subsequent page.
+- Randomize the question order.
+- The final page includes all available questions.
+
+For example, with 319 questions:
+
+| Folder | Static / Random | Progressive |
+|---|---:|---:|
+| `page_01` | 20 questions | — |
+| `page_02` | 20 questions | 40 questions |
+| `page_03` | 20 questions | 60 questions |
+| `...` | `...` | `...` |
+| `page_16` | 19 questions | 319 questions |
+
+The final incomplete batch is generated with the remaining questions rather than discarded.
 
 ## Version Control
 
-The `.gitignore` file is configured to exclude saved source HTML files and generated study data and pages from version control by default. Review `.gitignore` before committing changes to ensure that only the intended project files are uploaded to GitHub.
+The `.gitignore` file is configured to exclude saved source HTML files and generated study data and pages from version control by default.
+
+Review `.gitignore` before committing changes to ensure that only the intended project files are uploaded to GitHub.
 
 ## Responsible Use
 

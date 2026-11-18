@@ -30,10 +30,12 @@ SCRIPTS = [
     ),
 ]
 
-# Main HTML files opened automatically after generation.
+# HTML files opened automatically after generation.
 HTML_FILES = [
-    "questions_static.html",
-    "questions_random.html",
+    Path("questions_static.html"),
+    Path("questions_random.html"),
+    Path("exam_pages/page_01/p_01_static.html"),
+    Path("exam_pages/page_01/p_01_random.html"),
 ]
 
 
@@ -85,8 +87,10 @@ def find_brave():
         )
 
     possible_paths.append(
-        Path("C:/Program Files/BraveSoftware/"
-             "Brave-Browser/Application/brave.exe")
+        Path(
+            "C:/Program Files/BraveSoftware/"
+            "Brave-Browser/Application/brave.exe"
+        )
     )
 
     for path in possible_paths:
@@ -130,7 +134,7 @@ def main():
 
         print("\nAll generation steps completed successfully.")
 
-        # Open the main static and random pages last.
+        # Open the complete pages and the first batch pages.
         open_html_files()
 
         print("\nWorkflow completed successfully!")

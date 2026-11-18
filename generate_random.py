@@ -9,7 +9,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 INPUT_FILE = BASE_DIR / "questions.json"
 OUTPUT_FILE = BASE_DIR / "questions_random.html"
-BATCH_DIR = BASE_DIR / "random_pages"
+OUTPUT_DIR = BASE_DIR / "exam_pages"
 
 BATCH_SIZE = 20
 
@@ -320,12 +320,6 @@ backToTopButton.addEventListener("click", () => {{
     return document
 
 
-def remove_old_batches():
-    if BATCH_DIR.exists():
-        for file in BATCH_DIR.glob("questions_random_*.html"):
-            file.unlink()
-
-
 def main():
     if not INPUT_FILE.exists():
         raise FileNotFoundError(
@@ -336,23 +330,27 @@ def main():
         questions = json.load(file)
 
     if not isinstance(questions, list):
-        raise ValueError("questions.json must contain a JSON list of questions.")
+        raise ValueError(
+            "questions.json must contain a JSON list of questions."
+        )
 
-    # Generate the complete page, preserving the original question set.
+    # Generate the complete random page.
     full_document = render_document(
         questions,
         "Google Professional Data Engineer — Random Practice",
         "Random question order and random option order"
     )
+
     OUTPUT_FILE.write_text(full_document, encoding="utf-8")
 
-    # Remove old batch files so outdated questions cannot remain.
-    remove_old_batches()
+    print(f"Generated full page: {OUTPUT_FILE.resolve()}")
+    print(f"Questions included in full page: {len(questions)}")
 
+    # Generate random batches in the shared exam_pages folder.
     batch_count = 0
 
     if len(questions) > BATCH_SIZE:
-        BATCH_DIR.mkdir(parents=True, exist_ok=True)
+        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
         # Keep batch membership identical to the static pages.
         # Shuffle only the question order within each batch.
@@ -365,26 +363,35 @@ def main():
 
             random.shuffle(batch_questions)
 
-            batch_file = BATCH_DIR / (
-                f"questions_random_{batch_count:03d}.html"
-            )
+            folder_name = f"page_{batch_count:02d}"
+            file_name = f"p_{batch_count:02d}_random.html"
+
+            batch_dir = OUTPUT_DIR / folder_name
+            batch_dir.mkdir(parents=True, exist_ok=True)
+
+            batch_file = batch_dir / file_name
 
             batch_document = render_document(
                 batch_questions,
                 f"Google Professional Data Engineer — Random Practice "
-                f"(Batch {batch_count:03d})",
-                f"Batch {batch_count:03d} · "
+                f"(Batch {batch_count:02d})",
+                f"Batch {batch_count:02d} · "
                 f"{len(batch_questions)} questions · Random order"
             )
 
             batch_file.write_text(batch_document, encoding="utf-8")
 
-    print(f"Generated full page: {OUTPUT_FILE.resolve()}")
-    print(f"Questions included in full page: {len(questions)}")
+            print(
+                f"Generated: {batch_file.relative_to(BASE_DIR)} "
+                f"({len(batch_questions)} questions)"
+            )
+
+    print("\nRandom generation completed!")
+    print(f"Total questions: {len(questions)}")
 
     if batch_count:
-        print(f"Generated batch pages: {batch_count}")
-        print(f"Batch folder: {BATCH_DIR.resolve()}")
+        print(f"Random batches created: {batch_count}")
+        print(f"Output folder: {OUTPUT_DIR.resolve()}")
     else:
         print("20 or fewer questions: no batch pages generated.")
 
