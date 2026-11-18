@@ -1,4 +1,5 @@
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -7,12 +8,29 @@ from pathlib import Path
 PROJECT_DIR = Path(__file__).resolve().parent
 
 SCRIPTS = [
-    ("1/4 - Extract HTML pages and generate JSON", "html_to_json.py"),
-    ("2/4 - Check duplicate questions", "check_duplicates.py"),
-    ("3/4 - Generate static HTML", "generate_static.py"),
-    ("4/4 - Generate random HTML", "generate_random.py"),
+    (
+        "1/5 - Extract HTML pages and generate JSON",
+        "html_to_json.py",
+    ),
+    (
+        "2/5 - Check duplicate questions",
+        "check_duplicates.py",
+    ),
+    (
+        "3/5 - Generate static HTML",
+        "generate_static.py",
+    ),
+    (
+        "4/5 - Generate random HTML",
+        "generate_random.py",
+    ),
+    (
+        "5/5 - Generate cumulative random pages",
+        "generate_progressive_random.py",
+    ),
 ]
 
+# Main HTML files opened automatically after generation.
 HTML_FILES = [
     "questions_static.html",
     "questions_random.html",
@@ -41,21 +59,38 @@ def run_script(script_name, description):
 
 
 def find_brave():
-    possible_paths = [
-        Path(sys.environ["PROGRAMFILES"]) / "BraveSoftware"
-        / "Brave-Browser" / "Application" / "brave.exe"
-        if hasattr(sys, "environ") else None,
-        Path.home() / "AppData" / "Local" / "BraveSoftware"
-        / "Brave-Browser" / "Application" / "brave.exe",
-    ]
+    possible_paths = []
 
-    # Also check the usual Program Files location.
+    # Check the standard Windows installation locations.
+    program_files = os.environ.get("PROGRAMFILES")
+
+    if program_files:
+        possible_paths.append(
+            Path(program_files)
+            / "BraveSoftware"
+            / "Brave-Browser"
+            / "Application"
+            / "brave.exe"
+        )
+
+    local_app_data = os.environ.get("LOCALAPPDATA")
+
+    if local_app_data:
+        possible_paths.append(
+            Path(local_app_data)
+            / "BraveSoftware"
+            / "Brave-Browser"
+            / "Application"
+            / "brave.exe"
+        )
+
     possible_paths.append(
-        Path("C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe")
+        Path("C:/Program Files/BraveSoftware/"
+             "Brave-Browser/Application/brave.exe")
     )
 
     for path in possible_paths:
-        if path and path.exists():
+        if path.exists():
             return path
 
     return None
@@ -77,7 +112,10 @@ def open_html_files():
                 f"Generated HTML file not found: {html_path}"
             )
 
-        subprocess.Popen([str(brave_path), str(html_path)])
+        subprocess.Popen(
+            [str(brave_path), str(html_path)]
+        )
+
         print(f"Opened in Brave: {filename}")
 
 
@@ -86,11 +124,13 @@ def main():
     print(f"Project folder: {PROJECT_DIR}")
 
     try:
+        # Run all five generation steps in order.
         for description, script_name in SCRIPTS:
             run_script(script_name, description)
 
         print("\nAll generation steps completed successfully.")
 
+        # Open the main static and random pages last.
         open_html_files()
 
         print("\nWorkflow completed successfully!")
